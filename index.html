@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPF vs Mutual Fund Planner — India</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#172033;background:#f5f7fb;line-height:1.45}
+*{box-sizing:border-box}body{margin:0}header{background:#14213d;color:#fff;padding:28px 18px}
+.wrap{max-width:1050px;margin:auto;padding:0 16px}header h1{margin:0 0 8px;font-size:clamp(1.55rem,3vw,2.2rem)}header p{margin:0;color:#d9e2f2;max-width:780px}
+main{padding:22px 0 40px}.notice{background:#fff8e6;border:1px solid #f1d68a;padding:12px 14px;border-radius:12px;margin-bottom:18px;font-size:.94rem}
+.panel{background:#fff;border:1px solid #e0e5ee;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #1b2b4b08}
+h2{font-size:1.2rem;margin:0 0 14px}h3{font-size:1rem;margin:0 0 8px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+label{display:block;font-size:.88rem;font-weight:600;margin-bottom:5px;color:#36435a}
+input,select{width:100%;padding:10px 11px;border:1px solid #cbd3e1;border-radius:9px;background:#fff;color:#172033;font:inherit}
+small,.hint{color:#647087;font-size:.82rem}.field small{display:block;margin-top:4px}
+.results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.result{border-radius:14px;padding:16px;background:#f1f5fb;border:1px solid #e0e7f1}.result.mf{background:#eef8f1;border-color:#cfe8d7}
+.big{font-size:clamp(1.45rem,3vw,2rem);font-weight:750;letter-spacing:-.03em;margin:5px 0}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.metric{padding:12px;border:1px solid #e1e6ef;border-radius:12px}.metric .val{font-size:1.12rem;font-weight:700;margin-top:4px}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{padding:10px 8px;text-align:right;border-bottom:1px solid #e7ebf2}th:first-child,td:first-child{text-align:left}th{color:#526079;font-weight:650}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:10px;padding:11px 15px;font:inherit;font-weight:650;cursor:pointer;background:#183b70;color:#fff}button.secondary{background:#e9eef6;color:#18304f}
+.disclaimer{font-size:.83rem;color:#5c6678}.status{font-weight:700}.error{color:#a12a2a}
+@media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.metrics{grid-template-columns:1fr}.panel{padding:14px}}
+@media(max-width:470px){.grid,.results{grid-template-columns:1fr}header{padding:22px 0}}
+@media print{body{background:#fff}header{background:#fff;color:#172033;padding:0 0 14px}header p{color:#333}.panel{box-shadow:none;break-inside:avoid}.actions{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>EPF vs Mutual Fund Planner</h1><p>A shareable, educational calculator for India. Compare keeping higher EPF contributions with reducing contributions and investing the after-tax difference in a mutual fund.</p></div></header>
+<main class="wrap">
+<div class="notice"><strong>Important:</strong> This tool gives estimates, not tax, legal or investment advice. Confirm the proposed PF cap and payroll treatment with HR/EPFO. Mutual-fund returns are not guaranteed. Inputs are processed in this page and are not uploaded anywhere.</div>
+
+<section class="panel">
+<h2>1. Salary and current PF</h2>
+<div class="grid">
+<div class="field"><label for="basic">Monthly basic salary (₹)</label><input id="basic" type="number" min="0" value="80500"><small>PF is assumed to be calculated on this basic.</small></div>
+<div class="field"><label for="hra">Monthly HRA (₹)</label><input id="hra" type="number" min="0" value="40250"></div>
+<div class="field"><label for="allow">Other monthly taxable allowances (₹)</label><input id="allow" type="number" min="0" value="18320"><small>Include fixed allowance and taxable reimbursements; exclude employer PF/NPS.</small></div>
+<div class="field"><label for="bonus">Annual taxable bonus (₹)</label><input id="bonus" type="number" min="0" value="394450"></div>
+<div class="field"><label for="other">Other annual taxable income (₹)</label><input id="other" type="number" min="0" value="0"></div>
+<div class="field"><label for="employeeRate">Employee PF rate (%)</label><input id="employeeRate" type="number" min="0" max="100" step=".1" value="12"></div>
+<div class="field"><label for="employerRate">Employer PF rate (%)</label><input id="employerRate" type="number" min="0" max="100" step=".1" value="12"></div>
+<div class="field"><label for="epsMonthly">Employer share allocated to EPS (₹/month)</label><input id="epsMonthly" type="number" min="0" value="1250"><small>Illustrative standard capped EPS amount. Check your payslip/passbook; enter ₹0 if no EPS allocation applies.</small></div>
+<div class="field"><label for="employeeCap">Proposed employee PF cap (₹/month)</label><input id="employeeCap" type="number" min="0" value="3000"></div>
+<div class="field"><label for="employerCap">Proposed employer PF cap (₹/month)</label><input id="employerCap" type="number" min="0" value="3000"></div>
+<div class="field"><label for="employerNps">Employer NPS contribution (₹/month)</label><input id="employerNps" type="number" min="0" value="11270"><small>Used to estimate the eligible Section 80CCD(2) deduction.</small></div>
+<div class="field"><label for="currentPf">Existing EPF balance (₹)</label><input id="currentPf" type="number" min="0" value="0"></div>
+<div class="field"><label for="resident">Resident individual?</label><select id="resident"><option value="yes" selected>Yes</option><option value="no">No</option></select><small>Rebate under Section 87A depends on residency and eligibility.</small></div>
+</div>
+</section>
+
+<section class="panel">
+<h2>2. Tax and investment assumptions</h2>
+<div class="grid">
+<div class="field"><label for="epfRate">Assumed EPF annual return (%)</label><input id="epfRate" type="number" min="0" max="20" step=".05" value="8.25"></div>
+<div class="field"><label for="mfRate">Assumed mutual-fund annual return (%)</label><input id="mfRate" type="number" min="-50" max="50" step=".25" value="10"></div>
+<div class="field"><label for="years">Investment period (years)</label><input id="years" type="number" min="1" max="50" value="15"></div>
+<div class="field"><label for="growth">Annual salary/contribution growth (%)</label><input id="growth" type="number" min="0" max="30" step=".5" value="0"></div>
+<div class="field"><label for="regime">Tax regime</label><select id="regime"><option value="new" selected>New regime (FY 2026–27 estimate)</option></select><small>New-regime slabs and standard deduction are modelled below.</small></div>
+<div class="field"><label for="npsEligible">Employer NPS deduction eligible?</label><select id="npsEligible"><option value="yes" selected>Yes, subject to limit</option><option value="no">No / not sure</option></select></div>
+</div>
+<div class="hint" style="margin-top:12px">Tax model: new-regime slabs ₹0–4L: 0%; ₹4–8L: 5%; ₹8–12L: 10%; ₹12–16L: 15%; ₹16–20L: 20%; ₹20–24L: 25%; above ₹24L: 30%, plus 4% cess. It applies a ₹75,000 standard deduction and estimates employer NPS deduction up to 14% of annual basic when marked eligible. Rebate and surcharge edge cases may need professional verification.</div>
+</section>
+
+<section class="panel">
+<h2>3. Your comparison</h2>
+<div class="results">
+<div class="result"><h3>Option A — Keep higher PF</h3><div class="big" id="pfCorpus">—</div><div class="hint">Projected EPF corpus after the selected period</div><p id="pfTaxText" class="hint"></p></div>
+<div class="result mf"><h3>Option B — Lower PF + mutual fund</h3><div class="big" id="mixedCorpus">—</div><div class="hint">Remaining EPF + projected mutual-fund corpus</div><p id="mfTaxText" class="hint"></p></div>
+</div>
+<div class="metrics">
+<div class="metric"><div class="hint">Monthly amount freed from employee PF</div><div class="val" id="employeeFreed">—</div></div>
+<div class="metric"><div class="hint">Employer allowance after estimated extra tax</div><div class="val" id="employerNet">—</div></div>
+<div class="metric"><div class="hint">Estimated monthly MF investment</div><div class="val" id="monthlyInvest">—</div></div>
+</div>
+<table>
+<thead><tr><th>Comparison</th><th>Keep higher PF</th><th>Reduce PF + MF</th></tr></thead>
+<tbody>
+<tr><td>Annual taxable income estimate</td><td id="taxableA">—</td><td id="taxableB">—</td></tr>
+<tr><td>Estimated annual income tax</td><td id="taxA">—</td><td id="taxB">—</td></tr>
+<tr><td>Monthly amount allocated to EPF (excluding EPS)</td><td id="pfMonthlyA">—</td><td id="pfMonthlyB">—</td></tr>
+<tr><td>Monthly employer EPS allocation (not included in EPF corpus)</td><td id="epsMonthlyA">—</td><td id="epsMonthlyB">—</td></tr>
+<tr><td>Monthly amount invested in MF</td><td>₹0</td><td id="mfMonthlyB">—</td></tr>
+<tr><td>Projected ending corpus</td><td id="endA">—</td><td id="endB">—</td></tr>
+</tbody></table>
+<p id="recommendation" class="status"></p>
+<div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button class="secondary" id="reset">Reset example values</button><button class="secondary" id="copy">Copy summary</button></div>
+<p id="copyStatus" class="hint" aria-live="polite"></p>
+</section>
+
+<section class="panel">
+<h2>How to interpret this</h2>
+<ul>
+<li><strong>EPF and EPS are different.</strong> The employer contribution may be split between EPF and EPS. The EPS input is subtracted from the employer share before projecting the EPF corpus; EPS is shown separately and is not included in the EPF lump-sum projection.</li>
+<li><strong>Employee PF reduction</strong> is extra salary cash available because less is deducted from your pay.</li>
+<li><strong>Employer PF redirected</strong> is treated as extra taxable allowance in Option B only if your employer confirms that payroll treatment.</li>
+<li><strong>Tax is calculated separately</strong> for each scenario using the entered salary, bonus, standard deduction, and eligible employer NPS deduction. Employee PF contributions are not deducted from taxable income under the new regime.</li>
+<li><strong>Investment projection</strong> assumes month-end contributions and a steady return compounded monthly. Real returns fluctuate; mutual funds can lose money.</li>
+<li>This simplified model does not fully calculate HRA exemptions, every employer contribution exemption/limit, surcharge and marginal relief for high incomes, capital-gains tax, fund expenses, inflation, or changes in law. It is best used for an initial comparison, not as a tax filing calculator.</li>
+</ul>
+</section>
+<footer class="disclaimer">Educational calculator only. Confirm current FY tax provisions, EPFO eligibility and payroll rules with authoritative sources or a qualified professional before changing contributions.</footer>
+</main>
+<script>
+const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','years','growth','regime','npsEligible'];
+const val=id=>Math.max(0,Number(document.getElementById(id).value)||0);
+const fmt=n=>'₹'+Math.round(n).toLocaleString('en-IN');
+const lakh=n=>'₹'+(n/100000).toFixed(2)+' lakh';
+function slabTax(taxable,resident){
+  let x=Math.max(0,taxable), tax=0, bands=[[400000,0],[400000,.05],[400000,.10],[400000,.15],[400000,.20],[400000,.25],[Infinity,.30]],prev=0;
+  for(const [width,rate] of bands){const amount=Math.max(0,Math.min(x-prev,width));tax+=amount*rate;prev+=width;if(x<=prev)break;}
+  // New-regime Section 87A rebate for eligible resident individuals; simplified marginal relief at the threshold.
+  if(resident && x<=1200000){tax=Math.max(0,tax- Math.min(tax,60000));}
+  else if(resident && x>1200000 && x<=(1200000+tax)){tax=Math.min(tax,x-1200000);}
+  return tax*1.04;
+}
+function annualTax(additionalEmployerAllowance){
+  const basic=val('basic')*12, cash=(val('basic')+val('hra')+val('allow'))*12+val('bonus')+val('other')+additionalEmployerAllowance;
+  const standard=75000;
+  const nps= document.getElementById('npsEligible').value==='yes' ? Math.min(val('employerNps')*12,basic*.14) : 0;
+  const taxable=Math.max(0,cash-standard-nps);
+  return {taxable,tax:slabTax(taxable,document.getElementById('resident').value==='yes')};
+}
+function futureValue(monthly,rate,years,growth,initial=0){
+  const months=Math.max(1,Math.round(years*12)), r=rate/100/12, g=growth/100;
+  let balance=initial;
+  for(let m=1;m<=months;m++){
+    if(r!==0) balance*=1+r;
+    const year=Math.floor((m-1)/12);
+    balance+=monthly*Math.pow(1+g,year);
+  }
+  return balance;
+}
+function calculate(){
+ const basic=val('basic'), empRate=val('employeeRate')/100, erRate=val('employerRate')/100;
+ const empCurrent=basic*empRate, erCurrent=basic*erRate;
+ const empNew=Math.min(empCurrent,val('employeeCap')), erNew=Math.min(erCurrent,val('employerCap'));
+ const epsCurrent=Math.min(val('epsMonthly'),erCurrent), epsNew=Math.min(epsCurrent,erNew);
+ const epfCurrentMonthly=empCurrent+erCurrent-epsCurrent, epfNewMonthly=empNew+erNew-epsNew;
+ const empFreed=Math.max(0,empCurrent-empNew), erRedirect=Math.max(0,erCurrent-erNew);
+ const taxA=annualTax(0), taxB=annualTax(erRedirect*12);
+ const extraTax=Math.max(0,taxB.tax-taxA.tax);
+ const investMonthly=empFreed+erRedirect-extraTax/12;
+ const years=Math.min(50,Math.max(1,val('years'))), epfRate=Number(document.getElementById('epfRate').value)||0, mfRate=Number(document.getElementById('mfRate').value)||0, growth=val('growth'), balance=val('currentPf');
+ const pfA=futureValue(epfCurrentMonthly,epfRate,years,growth,balance);
+ const pfB=futureValue(epfNewMonthly,epfRate,years,growth,balance);
+ const mfB=futureValue(Math.max(0,investMonthly),mfRate,years,growth,0);
+ const totalB=pfB+mfB;
+ document.getElementById('pfCorpus').textContent=lakh(pfA);
+ document.getElementById('mixedCorpus').textContent=lakh(totalB);
+ document.getElementById('employeeFreed').textContent=fmt(empFreed);
+ document.getElementById('employerNet').textContent=fmt(erRedirect-extraTax/12);
+ document.getElementById('monthlyInvest').textContent=fmt(Math.max(0,investMonthly));
+ document.getElementById('pfTaxText').textContent='Estimated annual tax: '+fmt(taxA.tax)+' · taxable income: '+fmt(taxA.taxable);
+ document.getElementById('mfTaxText').textContent='Estimated annual tax: '+fmt(taxB.tax)+' · taxable income: '+fmt(taxB.taxable);
+ document.getElementById('taxableA').textContent=fmt(taxA.taxable);
+ document.getElementById('taxableB').textContent=fmt(taxB.taxable);
+ document.getElementById('taxA').textContent=fmt(taxA.tax);
+ document.getElementById('taxB').textContent=fmt(taxB.tax);
+ document.getElementById('pfMonthlyA').textContent=fmt(epfCurrentMonthly);
+ document.getElementById('pfMonthlyB').textContent=fmt(epfNewMonthly);
+ document.getElementById('epsMonthlyA').textContent=fmt(epsCurrent);
+ document.getElementById('epsMonthlyB').textContent=fmt(epsNew);
+ document.getElementById('mfMonthlyB').textContent=fmt(Math.max(0,investMonthly));
+ document.getElementById('endA').textContent=lakh(pfA);
+ document.getElementById('endB').textContent=lakh(totalB);
+ const diff=totalB-pfA, rec=document.getElementById('recommendation');
+ rec.textContent=(diff>=0?'Modelled advantage for lower PF + MF: ':'Modelled advantage for higher PF: ')+lakh(Math.abs(diff))+'. This is a projection, not a guarantee.';
+ rec.className='status '+(diff>=0?'':'');
+ window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference: ${lakh(Math.abs(diff))}\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, ${years} years, salary growth ${growth}%.`;
+}
+ids.forEach(id=>document.getElementById(id).addEventListener('input',calculate));
+document.getElementById('reset').addEventListener('click',()=>{location.reload()});
+document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(window.currentSummary);document.getElementById('copyStatus').textContent='Summary copied.'}catch(e){document.getElementById('copyStatus').textContent='Copy is not available in this browser. You can print or save as PDF instead.'}});
+calculate();
+</script>
+</body></html>
