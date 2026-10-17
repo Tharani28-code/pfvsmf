@@ -54,6 +54,8 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <div class="grid">
 <div class="field"><label for="epfRate">Assumed EPF annual return (%)</label><input id="epfRate" type="number" min="0" max="20" step=".05" value="8.25"></div>
 <div class="field"><label for="mfRate">Assumed mutual-fund annual return (%)</label><input id="mfRate" type="number" min="-50" max="50" step=".25" value="10"></div>
+<div class="field"><label for="ltcgRate">Equity MF LTCG tax rate (%)</label><input id="ltcgRate" type="number" min="0" max="100" step=".1" value="12.5"><small>Plus 4% cess in this estimate; surcharge excluded.</small></div>
+<div class="field"><label for="ltcgExemption">Annual equity LTCG exemption (₹)</label><input id="ltcgExemption" type="number" min="0" value="125000"><small>Assumes the ₹1.25 lakh exemption is unused by other eligible gains.</small></div>
 <div class="field"><label for="years">Investment period (years)</label><input id="years" type="number" min="1" max="50" value="15"></div>
 <div class="field"><label for="growth">Annual salary/contribution growth (%)</label><input id="growth" type="number" min="0" max="30" step=".5" value="0"></div>
 <div class="field"><label for="regime">Tax regime</label><select id="regime"><option value="new" selected>New regime (FY 2026–27 estimate)</option></select><small>New-regime slabs and standard deduction are modelled below.</small></div>
@@ -72,6 +74,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <div class="metric"><div class="hint">Monthly amount freed from employee PF</div><div class="val" id="employeeFreed">—</div></div>
 <div class="metric"><div class="hint">Employer allowance after estimated extra tax</div><div class="val" id="employerNet">—</div></div>
 <div class="metric"><div class="hint">Estimated monthly MF investment</div><div class="val" id="monthlyInvest">—</div></div>
+<div class="metric"><div class="hint">Estimated MF LTCG tax on redemption</div><div class="val" id="ltcgTax">—</div></div>
 </div>
 <table>
 <thead><tr><th>Comparison</th><th>Keep higher PF</th><th>Reduce PF + MF</th></tr></thead>
@@ -81,7 +84,9 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <tr><td>Monthly amount allocated to EPF (excluding EPS)</td><td id="pfMonthlyA">—</td><td id="pfMonthlyB">—</td></tr>
 <tr><td>Monthly employer EPS allocation (not included in EPF corpus)</td><td id="epsMonthlyA">—</td><td id="epsMonthlyB">—</td></tr>
 <tr><td>Monthly amount invested in MF</td><td>₹0</td><td id="mfMonthlyB">—</td></tr>
-<tr><td>Projected ending corpus</td><td id="endA">—</td><td id="endB">—</td></tr>
+<tr><td>Projected ending corpus before MF capital-gains tax</td><td id="endA">—</td><td id="endBBeforeTax">—</td></tr>
+<tr><td>Estimated MF LTCG tax at redemption</td><td>₹0</td><td id="ltcgTaxRow">—</td></tr>
+<tr><td>Projected ending corpus after estimated MF LTCG tax</td><td id="endAAfterTax">—</td><td id="endB">—</td></tr>
 </tbody></table>
 <p id="recommendation" class="status"></p>
 <div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button class="secondary" id="reset">Reset example values</button><button class="secondary" id="copy">Copy summary</button></div>
@@ -96,13 +101,14 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <li><strong>Employer PF redirected</strong> is treated as extra taxable allowance in Option B only if your employer confirms that payroll treatment.</li>
 <li><strong>Tax is calculated separately</strong> for each scenario using the entered salary, bonus, standard deduction, and eligible employer NPS deduction. Employee PF contributions are not deducted from taxable income under the new regime.</li>
 <li><strong>Investment projection</strong> assumes month-end contributions and a steady return compounded monthly. Real returns fluctuate; mutual funds can lose money.</li>
-<li>This simplified model does not fully calculate HRA exemptions, every employer contribution exemption/limit, surcharge and marginal relief for high incomes, capital-gains tax, fund expenses, inflation, or changes in law. It is best used for an initial comparison, not as a tax filing calculator.</li>
+<li><strong>MF LTCG estimate:</strong> assumes an equity-oriented mutual fund, full redemption in one financial year, eligible long-term gains, and the full annual ₹1.25 lakh exemption available. It estimates tax at the entered rate plus 4% cess, excluding surcharge. It does not account for each SIP instalment's holding period, other capital gains/losses, grandfathering, or exemptions/reinvestment provisions.</li>
+<li>This simplified model does not fully calculate HRA exemptions, every employer contribution exemption/limit, surcharge and marginal relief for high incomes, fund expenses, inflation, or changes in law. It is best used for an initial comparison, not as a tax filing calculator.</li>
 </ul>
 </section>
 <footer class="disclaimer">Educational calculator only. Confirm current FY tax provisions, EPFO eligibility and payroll rules with authoritative sources or a qualified professional before changing contributions.</footer>
 </main>
 <script>
-const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','years','growth','regime','npsEligible'];
+const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','ltcgRate','ltcgExemption','years','growth','regime','npsEligible'];
 const val=id=>Math.max(0,Number(document.getElementById(id).value)||0);
 const fmt=n=>'₹'+Math.round(n).toLocaleString('en-IN');
 const lakh=n=>'₹'+(n/100000).toFixed(2)+' lakh';
@@ -131,6 +137,12 @@ function futureValue(monthly,rate,years,growth,initial=0){
   }
   return balance;
 }
+function totalInvested(monthly,years,growth){
+  const months=Math.max(1,Math.round(years*12)), g=growth/100;
+  let total=0;
+  for(let m=1;m<=months;m++) total+=monthly*Math.pow(1+g,Math.floor((m-1)/12));
+  return total;
+}
 function calculate(){
  const basic=val('basic'), empRate=val('employeeRate')/100, erRate=val('employerRate')/100;
  const empCurrent=basic*empRate, erCurrent=basic*erRate;
@@ -145,12 +157,19 @@ function calculate(){
  const pfA=futureValue(epfCurrentMonthly,epfRate,years,growth,balance);
  const pfB=futureValue(epfNewMonthly,epfRate,years,growth,balance);
  const mfB=futureValue(Math.max(0,investMonthly),mfRate,years,growth,0);
- const totalB=pfB+mfB;
+ const mfInvested=totalInvested(Math.max(0,investMonthly),years,growth);
+  const mfGain=Math.max(0,mfB-mfInvested);
+  const taxableLtcg=Math.max(0,mfGain-val('ltcgExemption'));
+  const ltcgTax=taxableLtcg*(val('ltcgRate')/100)*1.04;
+  const totalBBeforeTax=pfB+mfB;
+  const totalB=pfB+mfB-ltcgTax;
  document.getElementById('pfCorpus').textContent=lakh(pfA);
  document.getElementById('mixedCorpus').textContent=lakh(totalB);
  document.getElementById('employeeFreed').textContent=fmt(empFreed);
  document.getElementById('employerNet').textContent=fmt(erRedirect-extraTax/12);
  document.getElementById('monthlyInvest').textContent=fmt(Math.max(0,investMonthly));
+ document.getElementById('ltcgTax').textContent=fmt(ltcgTax);
+ document.getElementById('ltcgTaxRow').textContent=fmt(ltcgTax);
  document.getElementById('pfTaxText').textContent='Estimated annual tax: '+fmt(taxA.tax)+' · taxable income: '+fmt(taxA.taxable);
  document.getElementById('mfTaxText').textContent='Estimated annual tax: '+fmt(taxB.tax)+' · taxable income: '+fmt(taxB.taxable);
  document.getElementById('taxableA').textContent=fmt(taxA.taxable);
@@ -163,11 +182,13 @@ function calculate(){
  document.getElementById('epsMonthlyB').textContent=fmt(epsNew);
  document.getElementById('mfMonthlyB').textContent=fmt(Math.max(0,investMonthly));
  document.getElementById('endA').textContent=lakh(pfA);
+ document.getElementById('endBBeforeTax').textContent=lakh(totalBBeforeTax);
+ document.getElementById('endAAfterTax').textContent=lakh(pfA);
  document.getElementById('endB').textContent=lakh(totalB);
  const diff=totalB-pfA, rec=document.getElementById('recommendation');
  rec.textContent=(diff>=0?'Modelled advantage for lower PF + MF: ':'Modelled advantage for higher PF: ')+lakh(Math.abs(diff))+'. This is a projection, not a guarantee.';
  rec.className='status '+(diff>=0?'':'');
- window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference: ${lakh(Math.abs(diff))}\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, ${years} years, salary growth ${growth}%.`;
+ window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference after estimated MF LTCG tax: ${lakh(Math.abs(diff))}\nEstimated MF LTCG tax on redemption: ${fmt(ltcgTax)} (gain ${fmt(mfGain)}, exemption ${fmt(val('ltcgExemption'))})\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, LTCG ${val('ltcgRate')}% plus 4% cess, ${years} years, salary growth ${growth}%.`;
 }
 ids.forEach(id=>document.getElementById(id).addEventListener('input',calculate));
 document.getElementById('reset').addEventListener('click',()=>{location.reload()});
