@@ -56,6 +56,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <div class="field"><label for="mfRate">Assumed mutual-fund annual return (%)</label><input id="mfRate" type="number" min="-50" max="50" step=".25" value="10"></div>
 <div class="field"><label for="ltcgRate">Equity MF LTCG tax rate (%)</label><input id="ltcgRate" type="number" min="0" max="100" step=".1" value="12.5"><small>Plus 4% cess in this estimate; surcharge excluded.</small></div>
 <div class="field"><label for="ltcgExemption">Annual equity LTCG exemption (₹)</label><input id="ltcgExemption" type="number" min="0" value="125000"><small>Assumes the ₹1.25 lakh exemption is unused by other eligible gains.</small></div>
+<div class="field"><label for="taxHarvesting">Annual LTCG tax harvesting</label><select id="taxHarvesting"><option value="yes">Enable (harvest exemption each year)</option><option value="no" selected>Disable (sell only at the end)</option></select><small>Illustrative equity-fund strategy; assumes gains are realized and immediately reinvested, with no transaction costs.</small></div>
 <div class="field"><label for="years">Investment period (years)</label><input id="years" type="number" min="1" max="50" value="15"></div>
 <div class="field"><label for="growth">Annual salary/contribution growth (%)</label><input id="growth" type="number" min="0" max="30" step=".5" value="0"></div>
 <div class="field"><label for="regime">Tax regime</label><select id="regime"><option value="new" selected>New regime (FY 2026–27 estimate)</option></select><small>New-regime slabs and standard deduction are modelled below.</small></div>
@@ -74,7 +75,9 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <div class="metric"><div class="hint">Monthly amount freed from employee PF</div><div class="val" id="employeeFreed">—</div></div>
 <div class="metric"><div class="hint">Employer allowance after estimated extra tax</div><div class="val" id="employerNet">—</div></div>
 <div class="metric"><div class="hint">Estimated monthly MF investment</div><div class="val" id="monthlyInvest">—</div></div>
-<div class="metric"><div class="hint">Estimated MF LTCG tax on redemption</div><div class="val" id="ltcgTax">—</div></div>
+<div class="metric"><div class="hint">Estimated MF LTCG tax on final redemption</div><div class="val" id="ltcgTax">—</div></div>
+<div class="metric"><div class="hint">Estimated tax saved by harvesting</div><div class="val" id="harvestTaxSaved">—</div></div>
+<div class="metric"><div class="hint">LTCG harvested before final year</div><div class="val" id="harvestedGains">—</div></div>
 </div>
 <table>
 <thead><tr><th>Comparison</th><th>Keep higher PF</th><th>Reduce PF + MF</th></tr></thead>
@@ -108,7 +111,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <footer class="disclaimer">Educational calculator only. Confirm current FY tax provisions, EPFO eligibility and payroll rules with authoritative sources or a qualified professional before changing contributions.</footer>
 </main>
 <script>
-const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','ltcgRate','ltcgExemption','years','growth','regime','npsEligible'];
+const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','ltcgRate','ltcgExemption','taxHarvesting','years','growth','regime','npsEligible'];
 const val=id=>Math.max(0,Number(document.getElementById(id).value)||0);
 const fmt=n=>'₹'+Math.round(n).toLocaleString('en-IN');
 const lakh=n=>'₹'+(n/100000).toFixed(2)+' lakh';
@@ -143,6 +146,27 @@ function totalInvested(monthly,years,growth){
   for(let m=1;m<=months;m++) total+=monthly*Math.pow(1+g,Math.floor((m-1)/12));
   return total;
 }
+
+function futureValueWithHarvest(monthly,rate,years,growth,exemption,harvestEnabled){
+ const months=Math.max(1,Math.round(years*12)), r=rate/100/12, g=growth/100;
+ let balance=0, basis=0, harvested=0;
+ for(let m=1;m<=months;m++){
+   if(r!==0) balance*=1+r;
+   const contribution=monthly*Math.pow(1+g,Math.floor((m-1)/12));
+   balance+=contribution; basis+=contribution;
+   // Harvest annually before the final redemption year, so the final year exemption remains available.
+   if(harvestEnabled && m%12===0 && m<months){
+     const unrealizedGain=Math.max(0,balance-basis);
+     const harvest=Math.min(unrealizedGain,exemption);
+     basis+=harvest; harvested+=harvest;
+   }
+ }
+ const gain=Math.max(0,balance-basis);
+ const taxableGain=Math.max(0,gain-exemption);
+ const tax=taxableGain*(val('ltcgRate')/100)*1.04;
+ return {balance,basis,gain,taxableGain,tax,harvested};
+}
+
 function calculate(){
  const basic=val('basic'), empRate=val('employeeRate')/100, erRate=val('employerRate')/100;
  const empCurrent=basic*empRate, erCurrent=basic*erRate;
@@ -156,13 +180,15 @@ function calculate(){
  const years=Math.min(50,Math.max(1,val('years'))), epfRate=Number(document.getElementById('epfRate').value)||0, mfRate=Number(document.getElementById('mfRate').value)||0, growth=val('growth'), balance=val('currentPf');
  const pfA=futureValue(epfCurrentMonthly,epfRate,years,growth,balance);
  const pfB=futureValue(epfNewMonthly,epfRate,years,growth,balance);
- const mfB=futureValue(Math.max(0,investMonthly),mfRate,years,growth,0);
  const mfInvested=totalInvested(Math.max(0,investMonthly),years,growth);
-  const mfGain=Math.max(0,mfB-mfInvested);
-  const taxableLtcg=Math.max(0,mfGain-val('ltcgExemption'));
-  const ltcgTax=taxableLtcg*(val('ltcgRate')/100)*1.04;
-  const totalBBeforeTax=pfB+mfB;
-  const totalB=pfB+mfB-ltcgTax;
+ const mfNoHarvest=futureValueWithHarvest(Math.max(0,investMonthly),mfRate,years,growth,val('ltcgExemption'),false);
+ const harvestEnabled=document.getElementById('taxHarvesting').value==='yes';
+ const mfResult=futureValueWithHarvest(Math.max(0,investMonthly),mfRate,years,growth,val('ltcgExemption'),harvestEnabled);
+ const mfB=mfResult.balance, mfGain=Math.max(0,mfB-mfInvested), ltcgTax=mfResult.tax;
+ const baselineTax=mfNoHarvest.tax;
+ const taxSaved=Math.max(0,baselineTax-ltcgTax);
+ const totalBBeforeTax=pfB+mfB;
+ const totalB=pfB+mfB-ltcgTax;
  document.getElementById('pfCorpus').textContent=lakh(pfA);
  document.getElementById('mixedCorpus').textContent=lakh(totalB);
  document.getElementById('employeeFreed').textContent=fmt(empFreed);
@@ -170,6 +196,8 @@ function calculate(){
  document.getElementById('monthlyInvest').textContent=fmt(Math.max(0,investMonthly));
  document.getElementById('ltcgTax').textContent=fmt(ltcgTax);
  document.getElementById('ltcgTaxRow').textContent=fmt(ltcgTax);
+ document.getElementById('harvestTaxSaved').textContent=fmt(taxSaved);
+ document.getElementById('harvestedGains').textContent=fmt(mfResult.harvested);
  document.getElementById('pfTaxText').textContent='Estimated annual tax: '+fmt(taxA.tax)+' · taxable income: '+fmt(taxA.taxable);
  document.getElementById('mfTaxText').textContent='Estimated annual tax: '+fmt(taxB.tax)+' · taxable income: '+fmt(taxB.taxable);
  document.getElementById('taxableA').textContent=fmt(taxA.taxable);
@@ -188,7 +216,7 @@ function calculate(){
  const diff=totalB-pfA, rec=document.getElementById('recommendation');
  rec.textContent=(diff>=0?'Modelled advantage for lower PF + MF: ':'Modelled advantage for higher PF: ')+lakh(Math.abs(diff))+'. This is a projection, not a guarantee.';
  rec.className='status '+(diff>=0?'':'');
- window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference after estimated MF LTCG tax: ${lakh(Math.abs(diff))}\nEstimated MF LTCG tax on redemption: ${fmt(ltcgTax)} (gain ${fmt(mfGain)}, exemption ${fmt(val('ltcgExemption'))})\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, LTCG ${val('ltcgRate')}% plus 4% cess, ${years} years, salary growth ${growth}%.`;
+ window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference after estimated MF LTCG tax: ${lakh(Math.abs(diff))}\nEstimated MF LTCG tax on final redemption: ${fmt(ltcgTax)} (remaining gain ${fmt(mfResult.gain)}, exemption ${fmt(val('ltcgExemption'))})\nAnnual tax harvesting: ${harvestEnabled?'enabled':'disabled'}; gains harvested before final year: ${fmt(mfResult.harvested)}; estimated tax saved vs no harvesting: ${fmt(taxSaved)}\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, LTCG ${val('ltcgRate')}% plus 4% cess, ${years} years, salary growth ${growth}%.`;
 }
 ids.forEach(id=>document.getElementById(id).addEventListener('input',calculate));
 document.getElementById('reset').addEventListener('click',()=>{location.reload()});
