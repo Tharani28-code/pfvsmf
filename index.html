@@ -54,6 +54,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <div class="grid">
 <div class="field"><label for="epfRate">Assumed EPF annual return (%)</label><input id="epfRate" type="number" min="0" max="20" step=".05" value="8.25"></div>
 <div class="field"><label for="mfRate">Assumed mutual-fund annual return (%)</label><input id="mfRate" type="number" min="-50" max="50" step=".25" value="10"></div>
+<div class="field"><label for="inflationRate">Assumed annual inflation (%)</label><input id="inflationRate" type="number" min="0" max="30" step=".25" value="6"><small>Used to express future balances in today’s rupees.</small></div>
 <div class="field"><label for="ltcgRate">Equity MF LTCG tax rate (%)</label><input id="ltcgRate" type="number" min="0" max="100" step=".1" value="12.5"><small>Plus 4% cess in this estimate; surcharge excluded.</small></div>
 <div class="field"><label for="ltcgExemption">Annual equity LTCG exemption (₹)</label><input id="ltcgExemption" type="number" min="0" value="125000"><small>Assumes the ₹1.25 lakh exemption is unused by other eligible gains.</small></div>
 <div class="field"><label for="taxHarvesting">Annual LTCG tax harvesting</label><select id="taxHarvesting"><option value="yes">Enable (harvest exemption each year)</option><option value="no" selected>Disable (sell only at the end)</option></select><small>Illustrative equity-fund strategy; assumes gains are realized and immediately reinvested, with no transaction costs.</small></div>
@@ -90,6 +91,8 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <tr><td>Projected ending corpus before MF capital-gains tax</td><td id="endA">—</td><td id="endBBeforeTax">—</td></tr>
 <tr><td>Estimated MF LTCG tax at redemption</td><td>₹0</td><td id="ltcgTaxRow">—</td></tr>
 <tr><td>Projected ending corpus after estimated MF LTCG tax</td><td id="endAAfterTax">—</td><td id="endB">—</td></tr>
+<tr><td><strong>Inflation-adjusted corpus (today’s rupees)</strong></td><td id="realEndA">—</td><td id="realEndB">—</td></tr>
+<tr><td>Inflation-adjusted annual return on assumed rate</td><td id="realRateA">—</td><td id="realRateB">—</td></tr>
 </tbody></table>
 <p id="recommendation" class="status"></p>
 <div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button class="secondary" id="reset">Reset example values</button><button class="secondary" id="copy">Copy summary</button></div>
@@ -104,6 +107,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <li><strong>Employer PF redirected</strong> is treated as extra taxable allowance in Option B only if your employer confirms that payroll treatment.</li>
 <li><strong>Tax is calculated separately</strong> for each scenario using the entered salary, bonus, standard deduction, and eligible employer NPS deduction. Employee PF contributions are not deducted from taxable income under the new regime.</li>
 <li><strong>Investment projection</strong> assumes month-end contributions and a steady return compounded monthly. Real returns fluctuate; mutual funds can lose money.</li>
+<li><strong>Inflation-adjusted corpus</strong> divides the projected after-tax ending balance by (1 + assumed inflation) raised to the investment period. It expresses future money in today’s purchasing power. The real annual return is calculated as (1 + nominal return) / (1 + inflation) − 1; actual inflation and returns will vary.</li>
 <li><strong>MF LTCG estimate:</strong> assumes an equity-oriented mutual fund, full redemption in one financial year, eligible long-term gains, and the full annual ₹1.25 lakh exemption available. It estimates tax at the entered rate plus 4% cess, excluding surcharge. It does not account for each SIP instalment's holding period, other capital gains/losses, grandfathering, or exemptions/reinvestment provisions.</li>
 <li>This simplified model does not fully calculate HRA exemptions, every employer contribution exemption/limit, surcharge and marginal relief for high incomes, fund expenses, inflation, or changes in law. It is best used for an initial comparison, not as a tax filing calculator.</li>
 </ul>
@@ -111,7 +115,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.93rem}th,td{
 <footer class="disclaimer">Educational calculator only. Confirm current FY tax provisions, EPFO eligibility and payroll rules with authoritative sources or a qualified professional before changing contributions.</footer>
 </main>
 <script>
-const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','ltcgRate','ltcgExemption','taxHarvesting','years','growth','regime','npsEligible'];
+const ids=['basic','hra','allow','bonus','other','employeeRate','employerRate','epsMonthly','employeeCap','employerCap','employerNps','currentPf','resident','epfRate','mfRate','inflationRate','ltcgRate','ltcgExemption','taxHarvesting','years','growth','regime','npsEligible'];
 const val=id=>Math.max(0,Number(document.getElementById(id).value)||0);
 const fmt=n=>'₹'+Math.round(n).toLocaleString('en-IN');
 const lakh=n=>'₹'+(n/100000).toFixed(2)+' lakh';
@@ -177,7 +181,7 @@ function calculate(){
  const taxA=annualTax(0), taxB=annualTax(erRedirect*12);
  const extraTax=Math.max(0,taxB.tax-taxA.tax);
  const investMonthly=empFreed+erRedirect-extraTax/12;
- const years=Math.min(50,Math.max(1,val('years'))), epfRate=Number(document.getElementById('epfRate').value)||0, mfRate=Number(document.getElementById('mfRate').value)||0, growth=val('growth'), balance=val('currentPf');
+ const years=Math.min(50,Math.max(1,val('years'))), epfRate=Number(document.getElementById('epfRate').value)||0, mfRate=Number(document.getElementById('mfRate').value)||0, inflationRate=val('inflationRate'), growth=val('growth'), balance=val('currentPf');
  const pfA=futureValue(epfCurrentMonthly,epfRate,years,growth,balance);
  const pfB=futureValue(epfNewMonthly,epfRate,years,growth,balance);
  const mfInvested=totalInvested(Math.max(0,investMonthly),years,growth);
@@ -213,10 +217,16 @@ function calculate(){
  document.getElementById('endBBeforeTax').textContent=lakh(totalBBeforeTax);
  document.getElementById('endAAfterTax').textContent=lakh(pfA);
  document.getElementById('endB').textContent=lakh(totalB);
+ const inflationFactor=Math.pow(1+inflationRate/100,years);
+ document.getElementById('realEndA').textContent=lakh(pfA/inflationFactor);
+ document.getElementById('realEndB').textContent=lakh(totalB/inflationFactor);
+ const realRate=(nominal,inflation)=>((1+nominal/100)/(1+inflation/100)-1)*100;
+ document.getElementById('realRateA').textContent=realRate(epfRate,inflationRate).toFixed(2)+'%';
+ document.getElementById('realRateB').textContent='MF: '+realRate(mfRate,inflationRate).toFixed(2)+'% (before tax)';
  const diff=totalB-pfA, rec=document.getElementById('recommendation');
  rec.textContent=(diff>=0?'Modelled advantage for lower PF + MF: ':'Modelled advantage for higher PF: ')+lakh(Math.abs(diff))+'. This is a projection, not a guarantee.';
  rec.className='status '+(diff>=0?'':'');
- window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference after estimated MF LTCG tax: ${lakh(Math.abs(diff))}\nEstimated MF LTCG tax on final redemption: ${fmt(ltcgTax)} (remaining gain ${fmt(mfResult.gain)}, exemption ${fmt(val('ltcgExemption'))})\nAnnual tax harvesting: ${harvestEnabled?'enabled':'disabled'}; gains harvested before final year: ${fmt(mfResult.harvested)}; estimated tax saved vs no harvesting: ${fmt(taxSaved)}\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, LTCG ${val('ltcgRate')}% plus 4% cess, ${years} years, salary growth ${growth}%.`;
+ window.currentSummary=`EPF vs Mutual Fund Planner\nMonthly basic: ${fmt(basic)}\nCurrent employee PF: ${fmt(empCurrent)}\nCurrent employer total contribution: ${fmt(erCurrent)}\nEmployer EPS allocation excluded from EPF corpus: ${fmt(epsCurrent)}\nCurrent monthly EPF credited: ${fmt(epfCurrentMonthly)}\nProposed employee/employer PF: ${fmt(empNew)} / ${fmt(erNew)}\nTaxable income, current: ${fmt(taxA.taxable)}; estimated tax: ${fmt(taxA.tax)}\nTaxable income, reduced PF: ${fmt(taxB.taxable)}; estimated tax: ${fmt(taxB.tax)}\nEmployee PF freed monthly: ${fmt(empFreed)}\nEmployer allowance redirected monthly: ${fmt(erRedirect)}\nEstimated monthly amount to invest: ${fmt(Math.max(0,investMonthly))}\nEPF-only projected corpus (EPS excluded): ${lakh(pfA)}\nReduced EPF + MF projected corpus: ${lakh(totalB)}\nDifference after estimated MF LTCG tax: ${lakh(Math.abs(diff))}\nInflation rate: ${inflationRate}%; inflation-adjusted EPF corpus in today’s rupees: ${lakh(pfA/Math.pow(1+inflationRate/100,years))}; inflation-adjusted mixed corpus in today’s rupees: ${lakh(totalB/Math.pow(1+inflationRate/100,years))}\nEstimated MF LTCG tax on final redemption: ${fmt(ltcgTax)} (remaining gain ${fmt(mfResult.gain)}, exemption ${fmt(val('ltcgExemption'))})\nAnnual tax harvesting: ${harvestEnabled?'enabled':'disabled'}; gains harvested before final year: ${fmt(mfResult.harvested)}; estimated tax saved vs no harvesting: ${fmt(taxSaved)}\nAssumptions: EPF ${epfRate}%, MF ${mfRate}%, inflation ${inflationRate}%, LTCG ${val('ltcgRate')}% plus 4% cess, ${years} years, salary growth ${growth}%.`;
 }
 ids.forEach(id=>document.getElementById(id).addEventListener('input',calculate));
 document.getElementById('reset').addEventListener('click',()=>{location.reload()});
